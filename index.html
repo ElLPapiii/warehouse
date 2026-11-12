@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Warehouse Online Firebase</title>
+
+<style>
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Arial,sans-serif;
+}
+
+body{
+background:#f4f6f9;
+padding:15px;
+}
+
+.header{
+background:#1565c0;
+color:white;
+padding:15px;
+border-radius:10px;
+margin-bottom:15px;
+text-align:center;
+}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+gap:10px;
+margin-bottom:15px;
+}
+
+.card{
+background:white;
+padding:15px;
+border-radius:10px;
+box-shadow:0 2px 5px rgba(0,0,0,.1);
+}
+
+input,select{
+width:100%;
+padding:10px;
+margin-bottom:8px;
+border:1px solid #ccc;
+border-radius:5px;
+}
+
+button{
+padding:10px;
+border:none;
+border-radius:5px;
+cursor:pointer;
+margin:2px;
+}
+
+.btn-primary{
+background:#1565c0;
+color:white;
+}
+
+.btn-warning{
+background:#ff9800;
+color:white;
+}
+
+.btn-success{
+background:#4caf50;
+color:white;
+}
+
+.btn-danger{
+background:#f44336;
+color:white;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+}
+
+th,td{
+border:1px solid #ddd;
+padding:6px;
+font-size:12px;
+}
+
+th{
+background:#1565c0;
+color:white;
+}
+
+.status-ready{
+color:red;
+font-weight:bold;
+}
+
+.status-approved{
+color:green;
+font-weight:bold;
+}
+
+.status-terkirim{
+color:blue;
+font-weight:bold;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+<h2>WAREHOUSE ONLINE FIREBASE</h2>
+</div>
+
+<div class="grid">
+
+<div class="card">
+<h4>Total Invoice</h4>
+<h2 id="totalInvoice">0</h2>
+</div>
+
+<div class="card">
+<h4>Total PCS</h4>
+<h2 id="totalPCS">0</h2>
+</div>
+
+<div class="card">
+<h4>Total CTN</h4>
+<h2 id="totalCTN">0</h2>
+</div>
+
+<div class="card">
+<h4>Approved</h4>
+<h2 id="totalApproved">0</h2>
+</div>
+
+</div>
+
+<div class="card">
+
+<h3>Input Data Warehouse</h3>
+
+<input id="invoice" placeholder="Nomor Invoice">
+<input id="po" placeholder="Nomor PO">
+<input id="ro" placeholder="Nomor RO">
+<input id="artikel" placeholder="Artikel">
+<input id="colour" placeholder="Colour">
+<input id="customer" placeholder="Customer">
+<input id="pcs" type="number" placeholder="PCS">
+<input id="ctn" type="number" placeholder="CTN">
+
+<button class="btn-primary" onclick="simpanData()">
+Simpan
+</button>
+
+<button class="btn-warning" onclick="updateData()">
+Update
+</button>
+
+</div>
+
+<div class="card">
+
+<input
+id="search"
+placeholder="Cari Invoice, PO, RO, Artikel, Customer"
+onkeyup="renderTable()">
+
+</div>
+
+<div class="card" style="overflow:auto;">
+
+<table>
+
+<thead>
+<tr>
+<th>Invoice</th>
+<th>PO</th>
+<th>RO</th>
+<th>Artikel</th>
+<th>Colour</th>
+<th>Customer</th>
+<th>PCS</th>
+<th>CTN</th>
+<th>Status</th>
+<th>Aksi</th>
+</tr>
+</thead>
+
+<tbody id="tbody"></tbody>
+
+</table>
+
+</div>
+
+<script type="module">
+
+import { initializeApp }
+from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+
+import {
+getFirestore,
+collection,
+addDoc,
+updateDoc,
+deleteDoc,
+doc,
+onSnapshot
+}
+from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+const firebaseConfig = {
+
+apiKey: "AIzaSyAWMUZ2RWbBxQm-TrgJSQnHRNQqiOoPc7M",
+authDomain: "warehouse-online-a136d.firebaseapp.com",
+projectId: "warehouse-online-a136d",
+storageBucket: "warehouse-online-a136d.firebasestorage.app",
+messagingSenderId: "418576556521",
+appId: "1:418576556521:web:3a5db081037cb35c21ab78"
+
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+let dataWarehouse = [];
+let editId = null;
+
+const warehouseRef = collection(db,"warehouse");
+
+window.simpanData = async function(){
+
+if(invoice.value.trim() === ""){
+alert("Invoice wajib diisi");
+return;
+}
+
+await addDoc(warehouseRef,{
+invoice:invoice.value,
+po:po.value,
+ro:ro.value,
+artikel:artikel.value,
+colour:colour.value,
+customer:customer.value,
+pcs:Number(pcs.value)||0,
+ctn:Number(ctn.value)||0,
+status:"READY",
+tanggal:new Date().toISOString()
+});
+
+bersihkanForm();
+
+};
+
+window.editData = function(id){
+
+const item =
+dataWarehouse.find(x=>x.id===id);
+
+if(!item) return;
+
+editId=id;
+
+invoice.value=item.invoice||"";
+po.value=item.po||"";
+ro.value=item.ro||"";
+artikel.value=item.artikel||"";
+colour.value=item.colour||"";
+customer.value=item.customer||"";
+pcs.value=item.pcs||0;
+ctn.value=item.ctn||0;
+
+};
+
+window.updateData = async function(){
+
+if(!editId){
+alert("Pilih data yang akan diedit");
+return;
+}
+
+await updateDoc(
+doc(db,"warehouse",editId),
+{
+invoice:invoice.value,
+po:po.value,
+ro:ro.value,
+artikel:artikel.value,
+colour:colour.value,
+customer:customer.value,
+pcs:Number(pcs.value)||0,
+ctn:Number(ctn.value)||0
+}
+);
+
+editId=null;
+
+bersihkanForm();
+
+};
+
+window.hapusData = async function(id){
+
+if(!confirm("Hapus Data?")) return;
+
+await deleteDoc(
+doc(db,"warehouse",id)
+);
+
+};
+
+window.approveData = async function(id){
+
+await updateDoc(
+doc(db,"warehouse",id),
+{
+status:"APPROVED"
+}
+);
+
+};
+
+window.kirimData = async function(id){
+
+await updateDoc(
+doc(db,"warehouse",id),
+{
+status:"TERKIRIM"
+}
+);
+
+};
+
+function bersihkanForm(){
+
+invoice.value="";
+po.value="";
+ro.value="";
+artikel.value="";
+colour.value="";
+customer.value="";
+pcs.value="";
+ctn.value="";
+
+}
+
+window.renderTable = function(){
+
+const kata =
+search.value.toLowerCase();
+
+let html="";
+
+const hasil =
+dataWarehouse.filter(x=>
+JSON.stringify(x)
+.toLowerCase()
+.includes(kata)
+);
+
+hasil.forEach(x=>{
+
+let warna="";
+
+if(x.status==="READY"){
+warna="status-ready";
+}
+
+if(x.status==="APPROVED"){
+warna="status-approved";
+}
+
+if(x.status==="TERKIRIM"){
+warna="status-terkirim";
+}
+
+html += `
+<tr>
+
+<td>${x.invoice||''}</td>
+<td>${x.po||''}</td>
+<td>${x.ro||''}</td>
+
+<td>${x.artikel||''}</td>
+<td>${x.colour||''}</td>
+<td>${x.customer||''}</td>
+
+<td>${x.pcs||0}</td>
+<td>${x.ctn||0}</td>
+
+<td>
+<span class="${warna}">
+${x.status}
+</span>
+</td>
+
+<td>
+
+<button onclick="editData('${x.id}')">
+Edit
+</button>
+
+<button
+class="btn-success"
+onclick="approveData('${x.id}')">
+Approve
+</button>
+
+<button
+class="btn-primary"
+onclick="kirimData('${x.id}')">
+Kirim
+</button>
+
+<button
+class="btn-danger"
+onclick="hapusData('${x.id}')">
+Hapus
+</button>
+
+</td>
+
+</tr>
+`;
+
+});
+
+tbody.innerHTML=html;
+
+totalInvoice.innerText =
+dataWarehouse.length;
+
+totalPCS.innerText =
+dataWarehouse.reduce((a,b)=>
+a+(b.pcs||0),0);
+
+totalCTN.innerText =
+dataWarehouse.reduce((a,b)=>
+a+(b.ctn||0),0);
+
+totalApproved.innerText =
+dataWarehouse.filter(x=>
+x.status==="APPROVED"
+).length;
+
+};
+
+onSnapshot(warehouseRef,(snapshot)=>{
+
+dataWarehouse=[];
+
+snapshot.forEach((d)=>{
+
+dataWarehouse.push({
+id:d.id,
+...d.data()
+});
+
+});
+
+renderTable();
+
+});
+
+</script>
+
+</body>
+</html>
